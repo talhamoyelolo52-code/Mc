@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compiler - MC Plugin Compiler</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: #0f0f1e;
+            color: #fff;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            min-height: 100vh;
+        }
+
+        /* Navbar */
+        .navbar {
+            background: rgba(15, 15, 30, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #1a1a3e;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 22px;
+            font-weight: bold;
+            background: linear-gradient(45deg, #00d4ff, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-decoration: none;
+        }
+
+        .nav-links a {
+            color: #aaa;
+            text-decoration: none;
+            margin-left: 30px;
+            font-size: 15px;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover, .nav-links a.active {
+            color: #00d4ff;
+        }
+
+        /* Main Content */
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 32px;
+            margin-bottom: 10px;
+            color: #00d4ff;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+        }
+
+        /* Upload Area */
+        .upload-section {
+            background: linear-gradient(135deg, #1a1a3e, #16213e);
+            border-radius: 20px;
+            padding: 40px;
+            border: 2px dashed #1a1a3e;
+            text-align: center;
+            transition: all 0.3s;
+            margin-bottom: 30px;
+        }
+
+        .upload-section.dragover {
+            border-color: #00d4ff;
+            background: #1a2a4a;
+        }
+
+        .upload-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+
+        .upload-text {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        .upload-hint {
+            color: #666;
+            font-size: 14px;
+        }
+
+        #fileInput { display: none; }
+
+        .browse-btn {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 12px 30px;
+            background: #00d4ff;
+            color: #0f0f1e;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+
+        .browse-btn:hover {
+            transform: scale(1.05);
+        }
+
+        /* File Info */
+        .file-info {
+            display: none;
+            background: #0f3460;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .file-info.show {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .file-name {
+            font-weight: bold;
+        }
+
+        .file-size {
+            color: #888;
+        }
+
+        .remove-file {
+            background: #ff4444;
+            color: #fff;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        /* Compile Button */
+        .compile-btn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(45deg, #00d4ff, #00ff88);
+            border: none;
+            border-radius: 12px;
+            color: #0f0f1e;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .compile-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.3);
+        }
+
+        .compile-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .spinner {
+            display: none;
+            width: 24px;
+            height: 24px;
+            border: 3px solid #0f0f1e;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Logs */
+        .logs-section {
+            margin-top: 40px;
+        }
+
+        .logs-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .logs-header h3 {
+            color: #00d4ff;
+            font-size: 20px;
+        }
+
+        .clear-btn {
+            background: #333;
+            color: #fff;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .logs-container {
+            background: #0a0a0a;
+            border-radius: 15px;
+            padding: 20px;
+            min-height: 300px;
+            max-height: 500px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .log-entry {
+            margin: 4px 0;
+            padding: 4px 0;
+            border-bottom: 1px solid #1a1a1a;
+        }
+
+        .log-time {
+            color: #555;
+            margin-right: 10px;
+        }
+
+        .log-info { color: #00ff88; }
+        .log-warn { color: #ffaa00; }
+        .log-error { color: #ff4444; }
+        .log-system { color: #00d4ff; }
+
+        /* Result */
+        .result-section {
+            display: none;
+            margin-top: 30px;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .result-success {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid #00ff88;
+        }
+
+        .result-failed {
+            background: rgba(255, 68, 68, 0.1);
+            border: 1px solid #ff4444;
+        }
+
+        .result-title {
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+
+        .download-btn {
+            display: inline-block;
+            padding: 14px 35px;
+            background: #00ff88;
+            color: #0f0f1e;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 16px;
+            margin: 10px;
+            transition: transform 0.2s;
+        }
+
+        .download-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .detail-btn {
+            display: inline-block;
+            padding: 14px 35px;
+            background: #00d4ff;
+            color: #0f0f1e;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 16px;
+            margin: 10px;
+            transition: transform 0.2s;
+        }
+
+        /* History Section */
+        .history-section {
+            margin-top: 50px;
+        }
+
+        .history-section h2 {
+            color: #00d4ff;
+            margin-bottom: 25px;
+            font-size: 24px;
+        }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .history-item {
+            background: #1a1a3e;
+            border-radius: 12px;
+            padding: 18px 22px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #1a1a3e;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .history-item:hover {
+            border-color: #00d4ff;
+            transform: translateX(5px);
+        }
+
+        .history-info h4 {
+            margin-bottom: 6px;
+        }
+
+        .history-meta {
+            color: #666;
+            font-size: 13px;
+        }
+
+        .history-status {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #555;
+        }
+
+        @media (max-width: 600px) {
+            .navbar { padding: 12px 15px; }
+            .nav-links a { margin-left: 15px; font-size: 13px; }
+            .upload-section { padding: 25px; }
+            h1 { font-size: 24px; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="logo">⚡ MC Plugin Compiler</a>
+        <div class="nav-links">
+            <a href="/">Home</a>
+            <a href="/compiler" class="active">Compiler</a>
+            <a href="#history">History</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1>🚀 Plugin Compiler</h1>
+        <p class="subtitle">Upload your plugin source code and compile instantly</p>
+
+        <!-- Upload -->
+        <div class="upload-section" id="dropZone">
+            <div class="upload-icon">📦</div>
+            <div class="upload-text">Drop your ZIP file here</div>
+            <div class="upload-hint">or click to browse • Supports .java, .xml, .gradle, .zip</div>
+            <label class="browse-btn" for="fileInput">Browse Files</label>
+            <input type="file" id="fileInput" accept=".zip">
+        </div>
+
+        <!-- File Info -->
+        <div class="file-info" id="fileInfo">
+            <div>
+                <div class="file-name" id="fileName"></div>
+                <div class="file-size" id="fileSize"></div>
+            </div>
+            <button class="remove-file" onclick="removeFile()">✕ Remove</button>
+        </div>
+
+        <!-- Compile Button -->
+        <button class="compile-btn" id="compileBtn" disabled>
+            <span class="spinner" id="spinner"></span>
+            <span id="btnText">⚡ Compile Plugin</span>
+        </button>
+
+        <!-- Result -->
+        <div class="result-section" id="resultSection">
+            <div class="result-title" id="resultTitle"></div>
+            <div id="resultActions"></div>
+        </div>
+
+        <!-- Logs -->
+        <div class="logs-section">
+            <div class="logs-header">
+                <h3>🖥️ Compilation Logs</h3>
+                <button class="clear-btn" onclick="clearLogs()">Clear</button>
+            </div>
+            <div class="logs-container" id="logContainer">
+                <div style="color:#555; text-align:center; padding:40px;">
+                    Logs will appear here when you start compiling...
+                </div>
+            </div>
+        </div>
+
+        <!-- History -->
+        <div class="history-section" id="history">
+            <h2>📜 Build History</h2>
+            <div class="history-list" id="historyList">
+                <div class="empty-state">No builds yet. Start compiling!</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const compileBtn = document.getElementById('compileBtn');
+        const logContainer = document.getElementById('logContainer');
+        const resultSection = document.getElementById('resultSection');
+
+        let selectedFile = null;
+        let currentBuildId = null;
+
+        // Drag & Drop
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        ['dragover', 'dragenter'].forEach(event => {
+            dropZone.addEventListener(event, (e) => {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(event => {
+            dropZone.addEventListener(event, (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+            });
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            const files = e.dataTransfer.files;
+            if (files.length) handleFile(files[0]);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) handleFile(e.target.files[0]);
+        });
+
+        function handleFile(file) {
+            if (!file.name.endsWith('.zip')) {
+                addLog('❌ Only .zip files are supported!', 'error');
+                return;
+            }
+
+            selectedFile = file;
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('fileSize').textContent = (file.size / 1024).toFixed(2) + ' KB';
+            fileInfo.classList.add('show');
+            compileBtn.disabled = false;
+
+            addLog(`📦 Selected: ${file.name} (${(file.size/1024).toFixed(2)} KB)`, 'system');
+        }
+
+        function removeFile() {
+            selectedFile = null;
+            fileInfo.classList.remove('show');
+            compileBtn.disabled = true;
+            fileInput.value = '';
+            addLog('🗑️ File removed', 'system');
+        }
+
+        compileBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+
+            compileBtn.disabled = true;
+            document.getElementById('spinner').style.display = 'inline-block';
+            document.getElementById('btnText').textContent = 'Compiling...';
+            resultSection.style.display = 'none';
+
+            addLog('🌐 Connected to server', 'system');
+            addLog('⏳ Starting compilation...', 'warn');
+            addLog(`📤 Uploading ${selectedFile.name}...`, 'system');
+
+            const formData = new FormData();
+            formData.append('plugin', selectedFile);
+
+            try {
+                const response = await fetch('/compile', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                currentBuildId = result.buildId;
+
+                if (result.success) {
+                    addLog('✅ Compilation successful!', 'info');
+                    addLog(`📦 Output: ${result.jarName || 'plugin.jar'}`, 'info');
+
+                    resultSection.className = 'result-section result-success';
+                    document.getElementById('resultTitle').textContent = '✅ Compilation Successful!';
+                    document.getElementById('resultActions').innerHTML = `
+                        <a href="${result.downloadUrl}" class="download-btn" download>⬇️ Download JAR</a>
+                        <a href="${result.detailUrl}" class="detail-btn">📋 View Details</a>
+                    `;
+                } else {
+                    addLog('❌ Compilation failed!', 'error');
+                    addLog(`📝 Error: ${result.error.substring(0, 200)}...`, 'error');
+
+                    resultSection.className = 'result-section result-failed';
+                    document.getElementById('resultTitle').textContent = '❌ Compilation Failed!';
+                    document.getElementById('resultActions').innerHTML = `
+                        <a href="${result.detailUrl}" class="detail-btn">📋 View Error Details</a>
+                    `;
+                }
+
+                resultSection.style.display = 'block';
+                loadHistory();
+
+            } catch (err) {
+                addLog('❌ Network error: ' + err.message, 'error');
+            }
+
+            compileBtn.disabled = false;
+            document.getElementById('spinner').style.display = 'none';
+            document.getElementById('btnText').textContent = '⚡ Compile Plugin';
+        });
+
+        function addLog(message, type = 'info') {
+            const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+            const div = document.createElement('div');
+            div.className = 'log-entry';
+            div.innerHTML = `<span class="log-time">[${time}]</span> <span class="log-${type}">${message}</span>`;
+
+            if (logContainer.children.length === 1 && logContainer.children[0].style.color === 'rgb(85, 85, 85)') {
+                logContainer.innerHTML = '';
+            }
+
+            logContainer.appendChild(div);
+            div.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function clearLogs() {
+            logContainer.innerHTML = '<div style="color:#555; text-align:center; padding:40px;">Logs will appear here when you start compiling...</div>';
+        }
+
+        // Load history
+        async function loadHistory() {
+            try {
+                const res = await fetch('/api/history');
+                const data = await res.json();
+                const list = document.getElementById('historyList');
+
+                if (!data.success || data.history.length === 0) {
+                    list.innerHTML = '<div class="empty-state">No builds yet. Start compiling!</div>';
+                    return;
+                }
+
+                list.innerHTML = data.history.map(build => `
+                    <div class="history-item" onclick="location.href='/detail/${build.id}'">
+                        <div class="history-info">
+                            <h4>${build.filename}</h4>
+                            <div class="history-meta">
+                                ${new Date(build.timestamp).toLocaleString()} • 
+                                ${build.buildType} • 
+                                ${build.buildTime ? (build.buildTime/1000).toFixed(1) + 's' : 'N/A'}
+                            </div>
+                        </div>
+                        <span class="history-status ${build.status === 'success' ? 'status-success' : 'status-failed'}">
+                            ${build.status === 'success' ? '✅' : '❌'}
+                        </span>
+                    </div>
+                `).join('');
+            } catch(e) {}
+        }
+
+        loadHistory();
+    </script>
+</body>
+</html>
